@@ -5,7 +5,7 @@
 
   <ItemGroup>
     <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.2"/>
+    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.5"/>
     <PackageVersion Include="ModelContextProtocol" Version="1.1.0" />
     <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.14.0" />
   </ItemGroup>
