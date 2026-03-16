@@ -6,5 +6,6 @@
     <File Path="NuGet.Config" />
     <File Path="README.md" />
   </Folder>
-  <Project Path="src/Akka.Console/Akka.Console.csproj" />
+  <Project Path="src/Meetup.McpServer/Meetup.McpServer.csproj" />
+  <Project Path="tests/Meetup.McpServer.Tests/Meetup.McpServer.Tests.csproj" />
 </Solution>
