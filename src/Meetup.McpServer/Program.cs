@@ -41,9 +41,9 @@ builder.Services
 
 builder.Services
     .AddMcpServer()
-    .WithHttpTransport()
+    .WithHttpTransport(options => options.Stateless = true)
     .WithToolsFromAssembly();
 
 var app = builder.Build();
-app.MapMcp();
+app.MapMcp("/mcp");
 await app.RunAsync();
