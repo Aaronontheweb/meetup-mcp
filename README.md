@@ -111,6 +111,13 @@ curl "http://YOUR_SERVER:8787/meetup/oauth/callback?code=THE_CODE"
 
 Tokens are persisted in a Docker volume (`meetup-mcp-tokens`) and survive container restarts. You only need to authorize once per token lifetime.
 
+> **Note:** If you previously ran this image and the OAuth token store fails to persist, your Docker volume may have incorrect ownership. Remove and recreate it:
+> ```bash
+> docker compose down
+> docker volume rm meetup-mcp-tokens
+> docker compose up -d
+> ```
+
 ## Configuration reference
 
 | Variable | Required | Default | Description |

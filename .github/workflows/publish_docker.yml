@@ -41,13 +41,26 @@ jobs:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-    - name: Publish container
+    - name: Build SDK container image
       run: |
         dotnet publish src/Meetup.McpServer/Meetup.McpServer.csproj \
           /t:PublishContainer \
           -c Release \
-          -p:ContainerRegistry=docker.io \
+          -p:ContainerImageTags=sdk-base \
           -p:VersionPrefix=${{ github.ref_name }}
+
+    - name: Build final image with volume fix
+      run: |
+        docker build \
+          --build-arg BASE_IMAGE=aaronontheweb/meetup-mcp:sdk-base \
+          -t aaronontheweb/meetup-mcp:${{ github.ref_name }} \
+          -t aaronontheweb/meetup-mcp:latest \
+          -f src/Meetup.McpServer/Dockerfile .
+
+    - name: Push images
+      run: |
+        docker push aaronontheweb/meetup-mcp:${{ github.ref_name }}
+        docker push aaronontheweb/meetup-mcp:latest
 
     - name: Update Docker Hub description
       uses: peter-evans/dockerhub-description@v4
