@@ -99,6 +99,22 @@ public sealed class OAuthAccessTokenProvider : IAccessTokenProvider, IDisposable
         }
     }
 
+    public async Task ExchangeCodeAsync(string code, CancellationToken cancellationToken)
+    {
+        if (_options.UseFakeApi)
+            return;
+
+        await _lock.WaitAsync(cancellationToken);
+        try
+        {
+            await ExchangeCodeForTokenAsync(code, cancellationToken);
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
     private void EnsureAuthListenerRunning()
     {
         // Already running and not faulted — URL is already set
@@ -176,33 +192,53 @@ public sealed class OAuthAccessTokenProvider : IAccessTokenProvider, IDisposable
         {
             using var registration = cancellationToken.Register(() => listener.Stop());
 
-            HttpListenerContext context;
-            try
+            while (true)
             {
-                context = await listener.GetContextAsync();
+                HttpListenerContext context;
+                try
+                {
+                    context = await listener.GetContextAsync();
+                }
+                catch (ObjectDisposedException)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    throw;
+                }
+
+                var code = context.Request.QueryString["code"];
+
+                if (code is not null)
+                {
+                    // Valid callback — return success page and the code
+                    var html = System.Text.Encoding.UTF8.GetBytes(
+                        """
+                        <html><body style="font-family:sans-serif;text-align:center;padding:60px">
+                        <h1>Authorization successful</h1>
+                        <p>You can close this tab and return to your terminal.</p>
+                        </body></html>
+                        """);
+                    context.Response.ContentType = "text/html; charset=utf-8";
+                    context.Response.ContentLength64 = html.Length;
+                    await context.Response.OutputStream.WriteAsync(html, cancellationToken);
+                    context.Response.Close();
+                    return code;
+                }
+
+                // No code parameter — return error page and keep listening
+                _logger.LogWarning("Received request without 'code' parameter on OAuth callback listener — ignoring");
+                var errorHtml = System.Text.Encoding.UTF8.GetBytes(
+                    """
+                    <html><body style="font-family:sans-serif;text-align:center;padding:60px">
+                    <h1>Missing authorization code</h1>
+                    <p>This endpoint is waiting for the Meetup OAuth callback. No <code>code</code> parameter was found in this request.</p>
+                    </body></html>
+                    """);
+                context.Response.StatusCode = 400;
+                context.Response.ContentType = "text/html; charset=utf-8";
+                context.Response.ContentLength64 = errorHtml.Length;
+                await context.Response.OutputStream.WriteAsync(errorHtml, cancellationToken);
+                context.Response.Close();
             }
-            catch (ObjectDisposedException)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                throw;
-            }
-
-            var code = context.Request.QueryString["code"];
-
-            var html = System.Text.Encoding.UTF8.GetBytes(
-                """
-                <html><body style="font-family:sans-serif;text-align:center;padding:60px">
-                <h1>Authorization successful</h1>
-                <p>You can close this tab and return to your terminal.</p>
-                </body></html>
-                """);
-            context.Response.ContentType = "text/html; charset=utf-8";
-            context.Response.ContentLength64 = html.Length;
-            await context.Response.OutputStream.WriteAsync(html, cancellationToken);
-            context.Response.Close();
-
-            return code ?? throw new InvalidOperationException(
-                "OAuth callback did not include a 'code' parameter. Authorization may have been denied.");
         }
         finally
         {

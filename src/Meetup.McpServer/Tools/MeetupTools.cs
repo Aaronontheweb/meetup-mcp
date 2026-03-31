@@ -27,9 +27,45 @@ public sealed class MeetupTools
         _options = options.Value;
     }
 
-    [McpServerTool, Description("Authorize this server with Meetup. Call this first if other tools return an authorization error. Returns the URL to open in your browser, then re-call the original tool once you have authorized.")]
-    public async Task<string> Authorize(CancellationToken cancellationToken)
+    [McpServerTool, Description("Authorize this server with Meetup. With no arguments, returns the URL to open in your browser. " +
+        "For headless/Docker deployments, open the URL in any browser, then call again with the 'callbackUrl' (the URL your browser was redirected to) " +
+        "or just the 'code' parameter from that URL.")]
+    public async Task<string> Authorize(
+        [Description("The authorization code from the OAuth callback URL.")] string? code = null,
+        [Description("The full OAuth callback URL from your browser's address bar. The code will be extracted automatically.")] string? callbackUrl = null,
+        CancellationToken cancellationToken = default)
     {
+        // Extract code from callbackUrl if provided
+        if (code is null && callbackUrl is not null)
+        {
+            try
+            {
+                var uri = new Uri(callbackUrl);
+                code = System.Web.HttpUtility.ParseQueryString(uri.Query)["code"];
+                if (code is null)
+                    return "The provided callback URL does not contain a 'code' parameter.";
+            }
+            catch (UriFormatException)
+            {
+                return "The provided callback URL is not a valid URL.";
+            }
+        }
+
+        // If we have a code (from either parameter), exchange it directly
+        if (code is not null)
+        {
+            try
+            {
+                await _tokenProvider.ExchangeCodeAsync(code, cancellationToken);
+                return "Authorization successful! You can now use Meetup tools.";
+            }
+            catch (HttpRequestException ex)
+            {
+                return $"Failed to exchange authorization code: {ex.Message}";
+            }
+        }
+
+        // No code provided — fall through to existing behavior
         try
         {
             await _tokenProvider.GetAccessTokenAsync(cancellationToken);
