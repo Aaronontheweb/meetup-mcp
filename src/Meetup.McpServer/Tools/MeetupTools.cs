@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using Meetup.McpServer.Configuration;
 using Meetup.McpServer.MeetupApi;
+using Meetup.McpServer.Security;
 using Microsoft.Extensions.Options;
 using ModelContextProtocol.Server;
 
@@ -10,17 +11,34 @@ namespace Meetup.McpServer.Tools;
 public sealed class MeetupTools
 {
     private readonly IMeetupApiClient _apiClient;
+    private readonly IAccessTokenProvider _tokenProvider;
     private readonly CapabilityPolicy _policy;
     private readonly MeetupServerOptions _options;
 
     public MeetupTools(
         IMeetupApiClient apiClient,
+        IAccessTokenProvider tokenProvider,
         CapabilityPolicy policy,
         IOptions<MeetupServerOptions> options)
     {
         _apiClient = apiClient;
+        _tokenProvider = tokenProvider;
         _policy = policy;
         _options = options.Value;
+    }
+
+    [McpServerTool, Description("Authorize this server with Meetup. Call this first if other tools return an authorization error. Returns the URL to open in your browser, then re-call the original tool once you have authorized.")]
+    public async Task<string> Authorize(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _tokenProvider.GetAccessTokenAsync(cancellationToken);
+            return "Already authorized with Meetup.";
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("authorization required"))
+        {
+            return ex.Message;
+        }
     }
 
     [McpServerTool, Description("Get metadata for the configured Meetup group.")]

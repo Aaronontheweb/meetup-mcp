@@ -3,12 +3,10 @@ using Meetup.McpServer.MeetupApi;
 using Meetup.McpServer.Security;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using ModelContextProtocol.Server;
 
-var builder = Host.CreateApplicationBuilder(args);
+var builder = WebApplication.CreateBuilder(args);
 
 builder.Logging.AddConsole(options =>
 {
@@ -20,7 +18,12 @@ builder.Services
     .AddSingleton<IOptions<MeetupServerOptions>>(sp => Options.Create(sp.GetRequiredService<MeetupServerOptions>()))
     .AddSingleton<CapabilityPolicy>()
     .AddHttpClient()
-    .AddSingleton<IAccessTokenProvider, JwtAccessTokenProvider>()
+    .AddSingleton<OAuthTokenStore>(sp =>
+    {
+        var opts = sp.GetRequiredService<IOptions<MeetupServerOptions>>().Value;
+        return new OAuthTokenStore(opts.TokenStorePath);
+    })
+    .AddSingleton<IAccessTokenProvider, OAuthAccessTokenProvider>()
     .AddSingleton<IMeetupApiClient>(sp =>
     {
         var options = sp.GetRequiredService<IOptions<MeetupServerOptions>>().Value;
@@ -38,7 +41,9 @@ builder.Services
 
 builder.Services
     .AddMcpServer()
-    .WithStdioServerTransport()
+    .WithHttpTransport(options => options.Stateless = true)
     .WithToolsFromAssembly();
 
-await builder.Build().RunAsync();
+var app = builder.Build();
+app.MapMcp("/mcp");
+await app.RunAsync();
