@@ -37,6 +37,10 @@ Use this skill when:
 |------|-------------|
 | `create_event` | Creates an event as DRAFT by default. Set `publishNow=true` only if `MEETUP_ALLOW_PUBLISH=true`. |
 | `edit_event` | Edit any combination of: title, description, startDateTime, duration, venueId, howToFindUs, featuredPhotoId. |
+| `add_event_speaker` | Add structured speaker details to an event. Meetup currently exposes one speaker profile per event through this API. |
+| `update_event_speaker` | Update the event's structured speaker details or replace/remove its speaker photo. |
+| `remove_event_speaker` | Remove structured speaker details from the event. |
+| `attach_event_speaker_photo` | Attach an uploaded photo to the event's structured speaker profile. |
 | `publish_event` | Publishes a draft event. Requires `MEETUP_ALLOW_PUBLISH=true` AND `confirm=true`. |
 | `create_event_photo_upload` | Gets a photo upload ticket with `photoId` and `uploadUrl`. The caller PUT's bytes to `uploadUrl`. |
 | `attach_event_photo` | Attaches an uploaded photo to an event as its featured image. |
@@ -141,6 +145,27 @@ create_event_photo_upload(contentType="image/jpeg")
 // Step 3: attach to event
 attach_event_photo(eventId="EVENT_ID", photoId="PHOTO_ID")
 ```
+
+### Add or update the structured speaker profile
+
+```
+add_event_speaker(
+  eventId="EVENT_ID",
+  name="Jane Doe",
+  bio="Principal engineer and community organizer.",
+  photoId="PHOTO_ID" // optional
+)
+
+update_event_speaker(
+  eventId="EVENT_ID",
+  bio="Updated speaker bio",
+  clearPhoto=false
+)
+
+attach_event_speaker_photo(eventId="EVENT_ID", photoId="PHOTO_ID")
+```
+
+Meetup's GraphQL surface currently exposes a single `speakerDetails` object per event rather than an arbitrary array of speakers.
 
 ---
 

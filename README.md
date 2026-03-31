@@ -22,6 +22,10 @@ Use your LLM to generate event content. Use this MCP server to execute Meetup op
 - `list_venues` — known venues for the group
 - `create_event` — creates as DRAFT by default
 - `edit_event` — update title, description, datetime, duration, venue, directions, featured photo
+- `add_event_speaker` — add structured speaker details to an event
+- `update_event_speaker` — edit structured speaker details or speaker photo
+- `remove_event_speaker` — remove structured speaker details from an event
+- `attach_event_speaker_photo` — attach an uploaded photo to the event speaker profile
 - `publish_event` — gated behind `MEETUP_ALLOW_PUBLISH=true`
 - `create_event_photo_upload` — get a direct upload ticket (photoId + uploadUrl)
 - `attach_event_photo` — attach an uploaded photo to an event
@@ -131,7 +135,18 @@ Photo upload is a two-step process:
 
 1. Call `create_event_photo_upload` → returns `{ photoId, uploadUrl }`
 2. `PUT` image bytes directly to `uploadUrl`
-3. Call `attach_event_photo` with `eventId` + `photoId`
+3. Call `attach_event_photo` or `attach_event_speaker_photo` with `eventId` + `photoId`
+
+## Structured speaker support
+
+Meetup's current GraphQL API exposes a single structured `speakerDetails` object per event, not a free-form speaker array. The MCP server exposes this through focused tools:
+
+- `add_event_speaker`
+- `update_event_speaker`
+- `remove_event_speaker`
+- `attach_event_speaker_photo`
+
+`get_event` now returns structured speaker details when present.
 
 ## Local development
 

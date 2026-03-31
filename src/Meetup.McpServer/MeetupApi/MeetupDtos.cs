@@ -13,7 +13,10 @@ public sealed record MeetupEvent(
     string? Status,
     string? EventUrl,
     MeetupVenue? Venue,
-    string? FeaturedPhotoId);
+    string? FeaturedPhotoId,
+    IReadOnlyList<MeetupSpeaker> Speakers);
+
+public sealed record MeetupSpeaker(string Name, string Bio, string? PhotoId);
 
 public sealed record CreateEventRequest(
     string Title,
@@ -32,6 +35,19 @@ public sealed record EditEventRequest(
     string? VenueId,
     string? HowToFindUs,
     string? FeaturedPhotoId);
+
+public sealed record AddEventSpeakerRequest(
+    string EventId,
+    string Name,
+    string Bio,
+    string? PhotoId);
+
+public sealed record UpdateEventSpeakerRequest(
+    string EventId,
+    string? Name,
+    string? Bio,
+    string? PhotoId,
+    bool ClearPhoto = false);
 
 public sealed record PublishEventRequest(string EventId);
 
