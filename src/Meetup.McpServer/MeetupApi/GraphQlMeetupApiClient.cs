@@ -55,16 +55,15 @@ public sealed class GraphQlMeetupApiClient : IMeetupApiClient
     {
         var normalizedStatus = (status ?? string.Empty).Trim().ToLowerInvariant() switch
         {
-            "" or "upcoming" => "UPCOMING",
+            "" or "upcoming" or "active" => "ACTIVE",
             "past" => "PAST",
             "draft" => "DRAFT",
-            "published" => "PUBLISHED",
-            _ => throw new InvalidOperationException("Invalid status. Use upcoming, past, draft, or published.")
+            _ => throw new InvalidOperationException("Invalid status. Use upcoming, past, or draft.")
         };
         var query = $$"""
             query($urlname: String!, $first: Int!) {
               groupByUrlname(urlname: $urlname) {
-                events(input: { first: $first, filter: { status: {{normalizedStatus}} } }) {
+                events(first: $first, status: {{normalizedStatus}}) {
                   edges {
                     node {
                       id
@@ -132,7 +131,7 @@ public sealed class GraphQlMeetupApiClient : IMeetupApiClient
         const string query = """
             query($urlname: String!, $first: Int!) {
               groupByUrlname(urlname: $urlname) {
-                venues(input: { first: $first }) {
+                venues(first: $first) {
                   edges {
                     node {
                       id

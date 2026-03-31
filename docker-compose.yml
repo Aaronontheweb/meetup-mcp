@@ -1,0 +1,15 @@
+services:
+  meetup-mcp:
+    image: meetup-mcp:latest
+    container_name: meetup-mcp
+    restart: unless-stopped
+    ports:
+      - "5180:8080"
+      - "8787:8787"
+    env_file:
+      - .env
+    volumes:
+      - meetup-mcp-tokens:/home/app/.meetup-mcp
+
+volumes:
+  meetup-mcp-tokens:

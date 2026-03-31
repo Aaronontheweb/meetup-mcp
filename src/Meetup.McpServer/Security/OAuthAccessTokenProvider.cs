@@ -14,11 +14,18 @@ public sealed class OAuthAccessTokenProvider : IAccessTokenProvider, IDisposable
     private readonly MeetupServerOptions _options;
     private readonly OAuthTokenStore _tokenStore;
     private readonly ILogger<OAuthAccessTokenProvider> _logger;
+
     private readonly SemaphoreSlim _lock = new(1, 1);
+    // Cancelled when the provider is disposed (i.e., server shutting down)
+    private readonly CancellationTokenSource _providerCts = new();
 
     private string? _accessToken;
     private string? _refreshToken;
     private DateTimeOffset _expiresAt;
+
+    // Background auth listener — outlives any single tool call
+    private Task? _pendingAuthTask;
+    private string? _pendingAuthUrl;
 
     public OAuthAccessTokenProvider(
         IHttpClientFactory httpClientFactory,
@@ -44,11 +51,10 @@ public sealed class OAuthAccessTokenProvider : IAccessTokenProvider, IDisposable
         await _lock.WaitAsync(cancellationToken);
         try
         {
-            // Double-check after acquiring lock
             if (IsTokenValid())
                 return _accessToken!;
 
-            // Try loading from disk if we don't have tokens in memory
+            // Try loading from disk
             if (_accessToken is null)
             {
                 var stored = await _tokenStore.LoadAsync(_options.OAuthClientId, cancellationToken);
@@ -80,13 +86,50 @@ public sealed class OAuthAccessTokenProvider : IAccessTokenProvider, IDisposable
                 }
             }
 
-            // Full interactive authorization
-            await AuthorizeInteractiveAsync(cancellationToken);
-            return _accessToken!;
+            // Need full authorization. Start the background listener if not already running,
+            // then immediately surface the URL as an error so the MCP client can show it.
+            EnsureAuthListenerRunning();
+
+            throw new InvalidOperationException(
+                $"Meetup authorization required. Open this URL in your browser to authorize:\n{_pendingAuthUrl}");
         }
         finally
         {
             _lock.Release();
+        }
+    }
+
+    private void EnsureAuthListenerRunning()
+    {
+        // Already running and not faulted — URL is already set
+        if (_pendingAuthTask is { IsCompleted: false })
+            return;
+
+        _pendingAuthUrl =
+            $"{_options.OAuthAuthorizeUrl}?client_id={Uri.EscapeDataString(_options.OAuthClientId)}" +
+            $"&response_type=code&redirect_uri={Uri.EscapeDataString(_options.OAuthRedirectUri)}";
+
+        _logger.LogWarning("Starting OAuth listener. Auth URL: {Url}", _pendingAuthUrl);
+
+        // Fire and forget — uses provider lifetime token so it survives individual tool call cancellations
+        _pendingAuthTask = Task.Run(() => RunAuthFlowAsync(_providerCts.Token), _providerCts.Token);
+    }
+
+    private async Task RunAuthFlowAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            var code = await ListenForCallbackCodeAsync(cancellationToken);
+            await ExchangeCodeForTokenAsync(code, cancellationToken);
+            _logger.LogInformation("Meetup authorization successful.");
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogWarning("OAuth listener cancelled.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "OAuth authorization flow failed.");
         }
     }
 
@@ -117,24 +160,11 @@ public sealed class OAuthAccessTokenProvider : IAccessTokenProvider, IDisposable
         await PersistTokens(payload, cancellationToken);
     }
 
-    private async Task AuthorizeInteractiveAsync(CancellationToken cancellationToken)
-    {
-        var authorizeUrl =
-            $"{_options.OAuthAuthorizeUrl}?client_id={Uri.EscapeDataString(_options.OAuthClientId)}" +
-            $"&response_type=code&redirect_uri={Uri.EscapeDataString(_options.OAuthRedirectUri)}";
-
-        _logger.LogWarning("Meetup authorization required. Open this URL in your browser:\n{Url}", authorizeUrl);
-
-        TryOpenBrowser(authorizeUrl);
-
-        var code = await ListenForCallbackCodeAsync(cancellationToken);
-        await ExchangeCodeForTokenAsync(code, cancellationToken);
-    }
-
     private async Task<string> ListenForCallbackCodeAsync(CancellationToken cancellationToken)
     {
         var uri = new Uri(_options.OAuthRedirectUri);
-        var prefix = $"http://{uri.Host}:{uri.Port}/";
+        // Bind to all interfaces ('+') so port mapping works inside Docker containers
+        var prefix = $"http://+:{uri.Port}/";
 
         using var listener = new HttpListener();
         listener.Prefixes.Add(prefix);
@@ -144,13 +174,21 @@ public sealed class OAuthAccessTokenProvider : IAccessTokenProvider, IDisposable
 
         try
         {
-            // Register cancellation to stop the listener
-            await using var registration = cancellationToken.Register(() => listener.Stop());
+            using var registration = cancellationToken.Register(() => listener.Stop());
 
-            var context = await listener.GetContextAsync();
+            HttpListenerContext context;
+            try
+            {
+                context = await listener.GetContextAsync();
+            }
+            catch (ObjectDisposedException)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                throw;
+            }
+
             var code = context.Request.QueryString["code"];
 
-            // Send a friendly response to the browser
             var html = System.Text.Encoding.UTF8.GetBytes(
                 """
                 <html><body style="font-family:sans-serif;text-align:center;padding:60px">
@@ -214,26 +252,14 @@ public sealed class OAuthAccessTokenProvider : IAccessTokenProvider, IDisposable
         }
         catch (Exception ex)
         {
-            // In-memory tokens are still valid for this session, but next restart will require re-auth
-            _logger.LogWarning(ex, "Failed to persist OAuth tokens to disk — session will work but re-authorization needed on restart");
-        }
-    }
-
-    private void TryOpenBrowser(string url)
-    {
-        try
-        {
-            var psi = new ProcessStartInfo(url) { UseShellExecute = true };
-            Process.Start(psi);
-        }
-        catch
-        {
-            // Best-effort — user can copy the URL from the log
+            _logger.LogWarning(ex, "Failed to persist OAuth tokens to disk — re-authorization will be needed on restart");
         }
     }
 
     public void Dispose()
     {
+        _providerCts.Cancel();
+        _providerCts.Dispose();
         _lock.Dispose();
     }
 

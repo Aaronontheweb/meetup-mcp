@@ -3,12 +3,10 @@ using Meetup.McpServer.MeetupApi;
 using Meetup.McpServer.Security;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using ModelContextProtocol.Server;
 
-var builder = Host.CreateApplicationBuilder(args);
+var builder = WebApplication.CreateBuilder(args);
 
 builder.Logging.AddConsole(options =>
 {
@@ -43,7 +41,9 @@ builder.Services
 
 builder.Services
     .AddMcpServer()
-    .WithStdioServerTransport()
+    .WithHttpTransport()
     .WithToolsFromAssembly();
 
-await builder.Build().RunAsync();
+var app = builder.Build();
+app.MapMcp();
+await app.RunAsync();
