@@ -105,4 +105,41 @@ public sealed class FakeMeetupApiClientTests
         var removed = await api.RemoveEventSpeakerAsync(created.Id, CancellationToken.None);
         Assert.Empty(removed.Speakers);
     }
+
+    [Fact]
+    public async Task EditEvent_PreservesExistingSpeaker()
+    {
+        var api = new FakeMeetupApiClient("nhdnug");
+
+        var created = await api.CreateEventAsync(
+            "nhdnug",
+            new CreateEventRequest(
+                Title: "Speaker Preservation Test",
+                Description: "Original description",
+                StartDateTime: DateTimeOffset.UtcNow.AddDays(5),
+                Duration: "PT2H",
+                VenueId: "venue-1"),
+            CancellationToken.None);
+
+        await api.AddEventSpeakerAsync(
+            new AddEventSpeakerRequest(created.Id, "Alice Smith", "Expert in distributed systems.", null),
+            CancellationToken.None);
+
+        var edited = await api.EditEventAsync(
+            new EditEventRequest(
+                EventId: created.Id,
+                Title: null,
+                Description: "Updated description",
+                StartDateTime: null,
+                Duration: null,
+                VenueId: null,
+                HowToFindUs: null,
+                FeaturedPhotoId: null),
+            CancellationToken.None);
+
+        Assert.Equal("Updated description", edited.Description);
+        Assert.Single(edited.Speakers);
+        Assert.Equal("Alice Smith", edited.Speakers[0].Name);
+        Assert.Equal("Expert in distributed systems.", edited.Speakers[0].Bio);
+    }
 }
