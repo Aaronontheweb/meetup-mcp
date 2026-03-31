@@ -284,6 +284,17 @@ public sealed class GraphQlMeetupApiClient : IMeetupApiClient
         if (request.HowToFindUs is not null) input["howToFindUs"] = request.HowToFindUs;
         if (request.FeaturedPhotoId is not null) input["featuredPhotoId"] = request.FeaturedPhotoId;
 
+        // Preserve existing speakers — the Meetup API clears speakerDetails
+        // when editEvent is called without re-sending them.
+        var current = await GetEventAsync(request.EventId, cancellationToken);
+        if (current.Speakers.Count > 0)
+        {
+            var speaker = current.Speakers[0];
+            input["speakerDetails"] = BuildSpeakerDetailsInput(
+                speaker.Name, speaker.Bio, speaker.PhotoId,
+                includePhotoId: speaker.PhotoId is not null);
+        }
+
         var data = await ExecuteAsync(query, new { input }, cancellationToken);
         var payload = data.GetProperty("editEvent");
         ThrowMutationErrorsIfAny(payload);
@@ -459,6 +470,16 @@ public sealed class GraphQlMeetupApiClient : IMeetupApiClient
             ["eventId"] = request.EventId,
             ["publishStatus"] = publishStatus,
         };
+
+        // Preserve existing speakers during publish status changes
+        var current = await GetEventAsync(request.EventId, cancellationToken);
+        if (current.Speakers.Count > 0)
+        {
+            var speaker = current.Speakers[0];
+            input["speakerDetails"] = BuildSpeakerDetailsInput(
+                speaker.Name, speaker.Bio, speaker.PhotoId,
+                includePhotoId: speaker.PhotoId is not null);
+        }
 
         var data = await ExecuteAsync(query, new { input }, cancellationToken);
         var payload = data.GetProperty("editEvent");

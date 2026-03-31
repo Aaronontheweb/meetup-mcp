@@ -117,6 +117,7 @@ public sealed class FakeMeetupApiClient : IMeetupApiClient
             Duration = request.Duration ?? current.Duration,
             Venue = venue,
             FeaturedPhotoId = request.FeaturedPhotoId ?? current.FeaturedPhotoId,
+            Speakers = current.Speakers,
         };
 
         _events[updated.Id] = updated;
