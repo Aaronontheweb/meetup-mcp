@@ -51,22 +51,20 @@ Meetup API endpoint overrides:
 - `MEETUP_API_URL` - default `https://api.meetup.com/gql-ext`
 - `MEETUP_OAUTH_ACCESS_URL` - default `https://secure.meetup.com/oauth2/access`
 
-JWT auth settings (required unless `MEETUP_USE_FAKE_API=true`):
+OAuth2 settings (required unless `MEETUP_USE_FAKE_API=true`):
 
-- `MEETUP_OAUTH_CLIENT_ID`
-- `MEETUP_JWT_SIGNING_KEY_ID`
-- `MEETUP_JWT_PRIVATE_KEY_PEM`
-- `MEETUP_AUTHORIZED_MEMBER_ID`
+- `MEETUP_OAUTH_KEY` - OAuth consumer key from Meetup OAuth client settings
+- `MEETUP_OAUTH_SECRET` - OAuth consumer secret
+- `MEETUP_OAUTH_REDIRECT_URI` - default `http://127.0.0.1:8787/meetup/oauth/callback`
+- `MEETUP_TOKEN_STORE_PATH` - optional, default `~/.meetup-mcp/tokens.json`
 
 ## Meetup setup (once per app)
 
 1. Create OAuth client: `https://www.meetup.com/api/oauth/create/`
 2. Set **Application Website** to a real URL (e.g. repo home page)
-3. Set **Redirect URI** (required by form) e.g. `http://127.0.0.1:8787/meetup/oauth/callback`
-4. Generate an RSA signing key in OAuth client settings
-5. Copy client id + `kid` + private key PEM + authorized member id into env vars
-
-Even though redirect URI is required by the UI, this server uses JWT server-to-server auth at runtime.
+3. Set **Redirect URI** to `http://127.0.0.1:8787/meetup/oauth/callback`
+4. Copy consumer key + consumer secret into env vars
+5. Run the server; on first API call it will open your browser to authorize and store tokens for reuse
 
 ## Image upload flow
 

@@ -11,10 +11,11 @@ public sealed class MeetupServerOptions
     public const string UseFakeApiEnvVar = "MEETUP_USE_FAKE_API";
     public const string ApiUrlEnvVar = "MEETUP_API_URL";
     public const string OAuthAccessUrlEnvVar = "MEETUP_OAUTH_ACCESS_URL";
-    public const string ClientIdEnvVar = "MEETUP_OAUTH_CLIENT_ID";
-    public const string JwtKidEnvVar = "MEETUP_JWT_SIGNING_KEY_ID";
-    public const string JwtPrivateKeyEnvVar = "MEETUP_JWT_PRIVATE_KEY_PEM";
-    public const string MemberIdEnvVar = "MEETUP_AUTHORIZED_MEMBER_ID";
+    public const string ClientIdEnvVar = "MEETUP_OAUTH_KEY";
+    public const string ClientSecretEnvVar = "MEETUP_OAUTH_SECRET";
+    public const string RedirectUriEnvVar = "MEETUP_OAUTH_REDIRECT_URI";
+    public const string OAuthAuthorizeUrlEnvVar = "MEETUP_OAUTH_AUTHORIZE_URL";
+    public const string TokenStorePathEnvVar = "MEETUP_TOKEN_STORE_PATH";
 
     public string GroupUrlname { get; init; } = string.Empty;
     public MeetupServerMode Mode { get; init; } = MeetupServerMode.Organizer;
@@ -26,9 +27,10 @@ public sealed class MeetupServerOptions
     public string OAuthAccessUrl { get; init; } = "https://secure.meetup.com/oauth2/access";
 
     public string OAuthClientId { get; init; } = string.Empty;
-    public string JwtSigningKeyId { get; init; } = string.Empty;
-    public string JwtPrivateKeyPem { get; init; } = string.Empty;
-    public string AuthorizedMemberId { get; init; } = string.Empty;
+    public string OAuthClientSecret { get; init; } = string.Empty;
+    public string OAuthRedirectUri { get; init; } = "http://127.0.0.1:8787/meetup/oauth/callback";
+    public string OAuthAuthorizeUrl { get; init; } = "https://secure.meetup.com/oauth2/authorize";
+    public string? TokenStorePath { get; init; }
 
     public static MeetupServerOptions FromConfiguration(IConfiguration configuration)
     {
@@ -48,9 +50,10 @@ public sealed class MeetupServerOptions
             MeetupApiUrl = configuration[ApiUrlEnvVar]?.Trim() ?? "https://api.meetup.com/gql-ext",
             OAuthAccessUrl = configuration[OAuthAccessUrlEnvVar]?.Trim() ?? "https://secure.meetup.com/oauth2/access",
             OAuthClientId = configuration[ClientIdEnvVar]?.Trim() ?? string.Empty,
-            JwtSigningKeyId = configuration[JwtKidEnvVar]?.Trim() ?? string.Empty,
-            JwtPrivateKeyPem = configuration[JwtPrivateKeyEnvVar]?.Trim() ?? string.Empty,
-            AuthorizedMemberId = configuration[MemberIdEnvVar]?.Trim() ?? string.Empty,
+            OAuthClientSecret = configuration[ClientSecretEnvVar]?.Trim() ?? string.Empty,
+            OAuthRedirectUri = configuration[RedirectUriEnvVar]?.Trim() ?? "http://127.0.0.1:8787/meetup/oauth/callback",
+            OAuthAuthorizeUrl = configuration[OAuthAuthorizeUrlEnvVar]?.Trim() ?? "https://secure.meetup.com/oauth2/authorize",
+            TokenStorePath = configuration[TokenStorePathEnvVar]?.Trim(),
         };
 
         Validate(options);
@@ -77,14 +80,12 @@ public sealed class MeetupServerOptions
 
         var missing = new List<string>();
         if (string.IsNullOrWhiteSpace(options.OAuthClientId)) missing.Add(ClientIdEnvVar);
-        if (string.IsNullOrWhiteSpace(options.JwtSigningKeyId)) missing.Add(JwtKidEnvVar);
-        if (string.IsNullOrWhiteSpace(options.JwtPrivateKeyPem)) missing.Add(JwtPrivateKeyEnvVar);
-        if (string.IsNullOrWhiteSpace(options.AuthorizedMemberId)) missing.Add(MemberIdEnvVar);
+        if (string.IsNullOrWhiteSpace(options.OAuthClientSecret)) missing.Add(ClientSecretEnvVar);
 
         if (missing.Count > 0)
         {
             throw new InvalidOperationException(
-                $"Missing required Meetup JWT configuration: {string.Join(", ", missing)}. " +
+                $"Missing required Meetup OAuth configuration: {string.Join(", ", missing)}. " +
                 $"Set {UseFakeApiEnvVar}=true to run with stubbed Meetup responses.");
         }
     }

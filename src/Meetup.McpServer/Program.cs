@@ -20,7 +20,12 @@ builder.Services
     .AddSingleton<IOptions<MeetupServerOptions>>(sp => Options.Create(sp.GetRequiredService<MeetupServerOptions>()))
     .AddSingleton<CapabilityPolicy>()
     .AddHttpClient()
-    .AddSingleton<IAccessTokenProvider, JwtAccessTokenProvider>()
+    .AddSingleton<OAuthTokenStore>(sp =>
+    {
+        var opts = sp.GetRequiredService<IOptions<MeetupServerOptions>>().Value;
+        return new OAuthTokenStore(opts.TokenStorePath);
+    })
+    .AddSingleton<IAccessTokenProvider, OAuthAccessTokenProvider>()
     .AddSingleton<IMeetupApiClient>(sp =>
     {
         var options = sp.GetRequiredService<IOptions<MeetupServerOptions>>().Value;
