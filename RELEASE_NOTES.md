@@ -1,3 +1,17 @@
+#### 0.2.0 2026-03-31 ####
+
+Fixes several bugs in event editing and Docker deployment, and adds headless OAuth support for server and container environments.
+
+**Bug Fixes**
+
+* Fixed `edit_event` clearing structured speakers when updating other event fields ([#24](https://github.com/Aaronontheweb/meetup-mcp/issues/24), [#25](https://github.com/Aaronontheweb/meetup-mcp/pull/25))
+* Fixed Docker volume mount for token store now using correct ownership (`app:app` instead of `root:root`) ([#19](https://github.com/Aaronontheweb/meetup-mcp/issues/19), [#26](https://github.com/Aaronontheweb/meetup-mcp/pull/26))
+* Fixed OAuth callback HTTP listener to loop until a valid authorization code arrives instead of failing on the first bad request
+
+**Features**
+
+* `authorize` tool now accepts optional `code` and `callbackUrl` parameters for headless and Docker deployments ([#18](https://github.com/Aaronontheweb/meetup-mcp/issues/18), [#27](https://github.com/Aaronontheweb/meetup-mcp/pull/27))
+
 #### 0.1.1 2026-03-31 ####
 
 Improves day-to-day event management by adding structured speaker tooling and simplifying Docker-based local deployment.
