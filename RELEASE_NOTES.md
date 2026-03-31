@@ -1,3 +1,17 @@
+#### 0.1.1 2026-03-31 ####
+
+Improves day-to-day event management by adding structured speaker tooling and simplifying Docker-based local deployment.
+
+**Features**
+
+* Added dedicated speaker management tools for Meetup events, including structured speaker bios and speaker photo support
+
+**Deployment**
+
+* Updated Docker Compose to use host networking so the OAuth callback listener is directly reachable on port `8787`
+* Configured the service to listen on `http://localhost:5180/mcp` without requiring the previous container port mapping setup
+* Switched Docker Compose to the published Docker Hub image for simpler startup from release artifacts
+
 #### 0.1.0 2026-03-31 ####
 
 Initial public release of the Meetup MCP server.
