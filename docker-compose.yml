@@ -1,11 +1,11 @@
 services:
   meetup-mcp:
-    image: meetup-mcp:latest
+    image: aaronontheweb/meetup-mcp:latest
     container_name: meetup-mcp
     restart: unless-stopped
-    ports:
-      - "5180:8080"
-      - "8787:8787"
+    network_mode: host
+    environment:
+      - ASPNETCORE_URLS=http://+:5180
     env_file:
       - .env
     volumes:
