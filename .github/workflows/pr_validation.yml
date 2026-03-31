@@ -50,5 +50,10 @@ jobs:
         shell: bash
         run: dotnet test -c Release 
 
-      - name: "dotnet pack"
-        run: dotnet pack -c Release -o ./bin/nuget
+      - name: "Build container image"
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          dotnet publish src/Meetup.McpServer/Meetup.McpServer.csproj \
+            /t:PublishContainer \
+            -c Release \
+            -p:ContainerRegistry=

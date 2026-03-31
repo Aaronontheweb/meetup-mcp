@@ -5,7 +5,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <EnableSdkContainerSupport>true</EnableSdkContainerSupport>
-    <ContainerRepository>meetup-mcp</ContainerRepository>
+    <ContainerRegistry>registry-1.docker.io</ContainerRegistry>
+    <ContainerRepository>aaronontheweb/meetup-mcp</ContainerRepository>
     <ContainerImageTag>latest</ContainerImageTag>
     <ContainerBaseImage>mcr.microsoft.com/dotnet/aspnet:10.0</ContainerBaseImage>
   </PropertyGroup>

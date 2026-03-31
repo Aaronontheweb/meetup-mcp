@@ -1,5 +1,7 @@
 # meetup-mcp
 
+[![Docker Hub](https://img.shields.io/docker/v/aaronontheweb/meetup-mcp?label=Docker%20Hub&logo=docker&sort=semver)](https://hub.docker.com/r/aaronontheweb/meetup-mcp)
+
 Organizer-focused MCP server for managing a single Meetup group. Runs as a persistent HTTP service via Docker Compose — start it once, connect from any Claude Code session.
 
 This server is intentionally simple:
