@@ -1,5 +1,8 @@
 services:
   meetup-mcp:
+    build:
+      context: .
+      dockerfile: src/Meetup.McpServer/Dockerfile
     image: aaronontheweb/meetup-mcp:latest
     container_name: meetup-mcp
     restart: unless-stopped
