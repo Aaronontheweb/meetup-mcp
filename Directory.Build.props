@@ -7,18 +7,18 @@
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <VersionPrefix>0.1.1</VersionPrefix>
-    <PackageReleaseNotes>Improves day-to-day event management by adding structured speaker tooling and simplifying Docker-based local deployment.
+    <VersionPrefix>0.2.0</VersionPrefix>
+    <PackageReleaseNotes>Fixes several bugs in event editing and Docker deployment, and adds headless OAuth support for server and container environments.
+
+**Bug Fixes**
+
+* Fixed `edit_event` clearing structured speakers when updating other event fields ([#24](https://github.com/Aaronontheweb/meetup-mcp/issues/24), [#25](https://github.com/Aaronontheweb/meetup-mcp/pull/25))
+* Fixed Docker volume mount for token store now using correct ownership (`app:app` instead of `root:root`) ([#19](https://github.com/Aaronontheweb/meetup-mcp/issues/19), [#26](https://github.com/Aaronontheweb/meetup-mcp/pull/26))
+* Fixed OAuth callback HTTP listener to loop until a valid authorization code arrives instead of failing on the first bad request
 
 **Features**
 
-* Added dedicated speaker management tools for Meetup events, including structured speaker bios and speaker photo support
-
-**Deployment**
-
-* Updated Docker Compose to use host networking so the OAuth callback listener is directly reachable on port `8787`
-* Configured the service to listen on `http://localhost:5180/mcp` without requiring the previous container port mapping setup
-* Switched Docker Compose to the published Docker Hub image for simpler startup from release artifacts</PackageReleaseNotes>
+* `authorize` tool now accepts optional `code` and `callbackUrl` parameters for headless and Docker deployments ([#18](https://github.com/Aaronontheweb/meetup-mcp/issues/18), [#27](https://github.com/Aaronontheweb/meetup-mcp/pull/27))</PackageReleaseNotes>
   </PropertyGroup>
   <PropertyGroup>
     <NetStandardLibVersion>netstandard2.0</NetStandardLibVersion>
