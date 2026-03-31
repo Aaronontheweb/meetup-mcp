@@ -50,10 +50,21 @@ jobs:
         shell: bash
         run: dotnet test -c Release 
 
+      - name: "Set up Docker"
+        if: matrix.os == 'ubuntu-latest'
+        uses: docker/setup-docker-action@v5
+        with:
+          daemon-config: |
+            {
+              "debug": true,
+              "features": {
+                "containerd-snapshotter": true
+              }
+            }
+
       - name: "Build container image"
         if: matrix.os == 'ubuntu-latest'
         run: |
           dotnet publish src/Meetup.McpServer/Meetup.McpServer.csproj \
             /t:PublishContainer \
-            -c Release \
-            -p:ContainerRegistry=
+            -c Release
