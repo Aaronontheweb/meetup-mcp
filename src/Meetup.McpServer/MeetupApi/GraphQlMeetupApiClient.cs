@@ -76,6 +76,13 @@ public sealed class GraphQlMeetupApiClient : IMeetupApiClient
                       featuredEventPhoto {
                         id
                       }
+                      speakerDetails {
+                        name
+                        description
+                        photo {
+                          id
+                        }
+                      }
                       venue {
                         id
                         name
@@ -109,6 +116,13 @@ public sealed class GraphQlMeetupApiClient : IMeetupApiClient
                 status
                 featuredEventPhoto {
                   id
+                }
+                speakerDetails {
+                  name
+                  description
+                  photo {
+                    id
+                  }
                 }
                 venue {
                   id
@@ -173,6 +187,13 @@ public sealed class GraphQlMeetupApiClient : IMeetupApiClient
                   duration
                   eventUrl
                   status
+                  speakerDetails {
+                    name
+                    description
+                    photo {
+                      id
+                    }
+                  }
                   venue {
                     id
                     name
@@ -225,6 +246,13 @@ public sealed class GraphQlMeetupApiClient : IMeetupApiClient
                   featuredEventPhoto {
                     id
                   }
+                  speakerDetails {
+                    name
+                    description
+                    photo {
+                      id
+                    }
+                  }
                   venue {
                     id
                     name
@@ -275,6 +303,49 @@ public sealed class GraphQlMeetupApiClient : IMeetupApiClient
             FeaturedPhotoId: null);
 
         return EditEventWithPublishStatusAsync(editRequest, "PUBLISHED", cancellationToken);
+    }
+
+    public async Task<MeetupEvent> AddEventSpeakerAsync(AddEventSpeakerRequest request, CancellationToken cancellationToken)
+    {
+        var current = await GetEventAsync(request.EventId, cancellationToken);
+        if (current.Speakers.Count > 0)
+        {
+            throw new InvalidOperationException($"Event '{request.EventId}' already has structured speaker details.");
+        }
+
+        return await EditEventSpeakerDetailsAsync(
+            request.EventId,
+            BuildSpeakerDetailsInput(request.Name, request.Bio, request.PhotoId, includePhotoId: request.PhotoId is not null),
+            cancellationToken);
+    }
+
+    public async Task<MeetupEvent> UpdateEventSpeakerAsync(UpdateEventSpeakerRequest request, CancellationToken cancellationToken)
+    {
+        var current = await GetEventAsync(request.EventId, cancellationToken);
+        var existing = GetSingleSpeaker(current);
+
+        return await EditEventSpeakerDetailsAsync(
+            request.EventId,
+            BuildSpeakerDetailsInput(
+                request.Name ?? existing.Name,
+                request.Bio ?? existing.Bio,
+                request.ClearPhoto ? null : request.PhotoId ?? existing.PhotoId,
+                includePhotoId: request.ClearPhoto || request.PhotoId is not null || existing.PhotoId is not null),
+            cancellationToken);
+    }
+
+    public async Task<MeetupEvent> RemoveEventSpeakerAsync(string eventId, CancellationToken cancellationToken)
+    {
+        var current = await GetEventAsync(eventId, cancellationToken);
+        _ = GetSingleSpeaker(current);
+        return await EditEventSpeakerDetailsAsync(eventId, null, cancellationToken);
+    }
+
+    public Task<MeetupEvent> AttachEventSpeakerPhotoAsync(string eventId, string photoId, CancellationToken cancellationToken)
+    {
+        return UpdateEventSpeakerAsync(
+            new UpdateEventSpeakerRequest(eventId, Name: null, Bio: null, PhotoId: photoId),
+            cancellationToken);
     }
 
     public async Task<EventPhotoUploadTicket> CreateEventPhotoUploadAsync(
@@ -358,6 +429,13 @@ public sealed class GraphQlMeetupApiClient : IMeetupApiClient
                   featuredEventPhoto {
                     id
                   }
+                  speakerDetails {
+                    name
+                    description
+                    photo {
+                      id
+                    }
+                  }
                   venue {
                     id
                     name
@@ -380,6 +458,62 @@ public sealed class GraphQlMeetupApiClient : IMeetupApiClient
         {
             ["eventId"] = request.EventId,
             ["publishStatus"] = publishStatus,
+        };
+
+        var data = await ExecuteAsync(query, new { input }, cancellationToken);
+        var payload = data.GetProperty("editEvent");
+        ThrowMutationErrorsIfAny(payload);
+        return ParseEvent(payload.GetProperty("event"));
+    }
+
+    private async Task<MeetupEvent> EditEventSpeakerDetailsAsync(
+        string eventId,
+        object? speakerDetails,
+        CancellationToken cancellationToken)
+    {
+        const string query = """
+            mutation($input: EditEventInput!) {
+              editEvent(input: $input) {
+                event {
+                  id
+                  title
+                  description
+                  dateTime
+                  duration
+                  eventUrl
+                  status
+                  featuredEventPhoto {
+                    id
+                  }
+                  speakerDetails {
+                    name
+                    description
+                    photo {
+                      id
+                    }
+                  }
+                  venue {
+                    id
+                    name
+                    address
+                    city
+                    state
+                    country
+                  }
+                }
+                errors {
+                  message
+                  code
+                  field
+                }
+              }
+            }
+            """;
+
+        var input = new Dictionary<string, object?>
+        {
+            ["eventId"] = eventId,
+            ["speakerDetails"] = speakerDetails
         };
 
         var data = await ExecuteAsync(query, new { input }, cancellationToken);
@@ -468,6 +602,11 @@ public sealed class GraphQlMeetupApiClient : IMeetupApiClient
             ? photoId.GetString()
             : null;
 
+        var speakers = node.TryGetProperty("speakerDetails", out var speakerDetails)
+                       && speakerDetails.ValueKind == JsonValueKind.Object
+            ? new[] { ParseSpeaker(speakerDetails) }
+            : Array.Empty<MeetupSpeaker>();
+
         return new MeetupEvent(
             Id: node.GetStringProperty("id"),
             Title: node.GetStringProperty("title"),
@@ -477,7 +616,48 @@ public sealed class GraphQlMeetupApiClient : IMeetupApiClient
             Status: node.TryGetProperty("status", out var status) ? status.GetString() : null,
             EventUrl: node.TryGetProperty("eventUrl", out var eventUrl) ? eventUrl.GetString() : null,
             Venue: venue,
-            FeaturedPhotoId: featuredPhotoId);
+            FeaturedPhotoId: featuredPhotoId,
+            Speakers: speakers);
+    }
+
+    private static MeetupSpeaker ParseSpeaker(JsonElement speaker)
+    {
+        var photoId = speaker.TryGetProperty("photo", out var photo)
+                      && photo.ValueKind == JsonValueKind.Object
+                      && photo.TryGetProperty("id", out var photoNode)
+            ? photoNode.GetString()
+            : null;
+
+        return new MeetupSpeaker(
+            Name: speaker.GetStringProperty("name"),
+            Bio: speaker.GetStringProperty("description"),
+            PhotoId: photoId);
+    }
+
+    private static Dictionary<string, object?> BuildSpeakerDetailsInput(string name, string bio, string? photoId, bool includePhotoId)
+    {
+        var input = new Dictionary<string, object?>
+        {
+            ["name"] = name,
+            ["description"] = bio
+        };
+
+        if (includePhotoId)
+        {
+            input["photoId"] = photoId;
+        }
+
+        return input;
+    }
+
+    private static MeetupSpeaker GetSingleSpeaker(MeetupEvent current)
+    {
+        if (current.Speakers.Count == 0)
+        {
+            throw new InvalidOperationException($"Event '{current.Id}' does not have structured speaker details.");
+        }
+
+        return current.Speakers[0];
     }
 
     private static MeetupVenue ParseVenue(JsonElement venue)

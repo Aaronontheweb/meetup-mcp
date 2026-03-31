@@ -182,4 +182,74 @@ public sealed class MeetupTools
         _policy.Demand(MeetupCapability.EditEvent, "attach_event_photo");
         return _apiClient.AttachEventPhotoAsync(eventId, photoId, cancellationToken);
     }
+
+    [McpServerTool, Description("Add structured speaker details to an event. Meetup currently exposes a single structured speaker profile per event via this API.")]
+    public Task<MeetupEvent> AddEventSpeaker(
+        [Description("Meetup event ID.")] string eventId,
+        [Description("Speaker display name.")] string name,
+        [Description("Speaker bio/description text.")] string bio,
+        [Description("Optional uploaded photo ID from create_event_photo_upload.")] string? photoId = null,
+        CancellationToken cancellationToken = default)
+    {
+        _policy.Demand(MeetupCapability.EditEvent, "add_event_speaker");
+
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            throw new InvalidOperationException("Speaker name is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(bio))
+        {
+            throw new InvalidOperationException("Speaker bio is required.");
+        }
+
+        return _apiClient.AddEventSpeakerAsync(
+            new AddEventSpeakerRequest(eventId, name.Trim(), bio.Trim(), string.IsNullOrWhiteSpace(photoId) ? null : photoId.Trim()),
+            cancellationToken);
+    }
+
+    [McpServerTool, Description("Update an event's structured speaker details. Meetup currently exposes a single structured speaker profile per event via this API.")]
+    public Task<MeetupEvent> UpdateEventSpeaker(
+        [Description("Meetup event ID.")] string eventId,
+        [Description("Optional updated speaker name.")] string? name = null,
+        [Description("Optional updated speaker bio/description.")] string? bio = null,
+        [Description("Optional replacement speaker photo ID from create_event_photo_upload.")] string? photoId = null,
+        [Description("Set true to remove the current speaker photo.")] bool clearPhoto = false,
+        CancellationToken cancellationToken = default)
+    {
+        _policy.Demand(MeetupCapability.EditEvent, "update_event_speaker");
+
+        if (name is null && bio is null && photoId is null && !clearPhoto)
+        {
+            throw new InvalidOperationException("Provide at least one speaker field to update.");
+        }
+
+        return _apiClient.UpdateEventSpeakerAsync(
+            new UpdateEventSpeakerRequest(
+                eventId,
+                string.IsNullOrWhiteSpace(name) ? null : name.Trim(),
+                string.IsNullOrWhiteSpace(bio) ? null : bio.Trim(),
+                string.IsNullOrWhiteSpace(photoId) ? null : photoId.Trim(),
+                clearPhoto),
+            cancellationToken);
+    }
+
+    [McpServerTool, Description("Remove structured speaker details from an event.")]
+    public Task<MeetupEvent> RemoveEventSpeaker(
+        [Description("Meetup event ID.")] string eventId,
+        CancellationToken cancellationToken = default)
+    {
+        _policy.Demand(MeetupCapability.EditEvent, "remove_event_speaker");
+        return _apiClient.RemoveEventSpeakerAsync(eventId, cancellationToken);
+    }
+
+    [McpServerTool, Description("Attach an uploaded photo ID to the event's structured speaker profile. Create or upload the photo first using create_event_photo_upload.")]
+    public Task<MeetupEvent> AttachEventSpeakerPhoto(
+        [Description("Meetup event ID.")] string eventId,
+        [Description("Photo ID from create_event_photo_upload.")] string photoId,
+        CancellationToken cancellationToken = default)
+    {
+        _policy.Demand(MeetupCapability.EditEvent, "attach_event_speaker_photo");
+        return _apiClient.AttachEventSpeakerPhotoAsync(eventId, photoId, cancellationToken);
+    }
 }

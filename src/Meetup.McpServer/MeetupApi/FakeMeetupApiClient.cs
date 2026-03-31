@@ -26,7 +26,8 @@ public sealed class FakeMeetupApiClient : IMeetupApiClient
             Status: "DRAFT",
             EventUrl: $"https://www.meetup.com/{groupUrlname}/events/evt-1000/",
             Venue: _venues[0],
-            FeaturedPhotoId: null);
+            FeaturedPhotoId: null,
+            Speakers: Array.Empty<MeetupSpeaker>());
 
         _events[seedEvent.Id] = seedEvent;
     }
@@ -93,7 +94,8 @@ public sealed class FakeMeetupApiClient : IMeetupApiClient
             Status: status,
             EventUrl: $"https://www.meetup.com/{_groupUrlname}/events/{id}/",
             Venue: venue,
-            FeaturedPhotoId: null);
+            FeaturedPhotoId: null,
+            Speakers: Array.Empty<MeetupSpeaker>());
 
         _events[id] = created;
         return Task.FromResult(created);
@@ -129,6 +131,57 @@ public sealed class FakeMeetupApiClient : IMeetupApiClient
         return Task.FromResult(published);
     }
 
+    public Task<MeetupEvent> AddEventSpeakerAsync(AddEventSpeakerRequest request, CancellationToken cancellationToken)
+    {
+        var current = GetEventForUpdate(request.EventId);
+        if (current.Speakers.Count > 0)
+        {
+            throw new InvalidOperationException($"Event '{request.EventId}' already has structured speaker details.");
+        }
+
+        var updated = current with
+        {
+            Speakers = [new MeetupSpeaker(request.Name, request.Bio, request.PhotoId)]
+        };
+
+        _events[updated.Id] = updated;
+        return Task.FromResult(updated);
+    }
+
+    public Task<MeetupEvent> UpdateEventSpeakerAsync(UpdateEventSpeakerRequest request, CancellationToken cancellationToken)
+    {
+        var current = GetEventForUpdate(request.EventId);
+        var speaker = GetSpeakerForUpdate(current);
+
+        var updatedSpeaker = speaker with
+        {
+            Name = request.Name ?? speaker.Name,
+            Bio = request.Bio ?? speaker.Bio,
+            PhotoId = request.ClearPhoto ? null : request.PhotoId ?? speaker.PhotoId
+        };
+
+        var updated = current with { Speakers = [updatedSpeaker] };
+        _events[updated.Id] = updated;
+        return Task.FromResult(updated);
+    }
+
+    public Task<MeetupEvent> RemoveEventSpeakerAsync(string eventId, CancellationToken cancellationToken)
+    {
+        var current = GetEventForUpdate(eventId);
+        _ = GetSpeakerForUpdate(current);
+
+        var updated = current with { Speakers = Array.Empty<MeetupSpeaker>() };
+        _events[updated.Id] = updated;
+        return Task.FromResult(updated);
+    }
+
+    public Task<MeetupEvent> AttachEventSpeakerPhotoAsync(string eventId, string photoId, CancellationToken cancellationToken)
+    {
+        return UpdateEventSpeakerAsync(
+            new UpdateEventSpeakerRequest(eventId, Name: null, Bio: null, PhotoId: photoId),
+            cancellationToken);
+    }
+
     public Task<EventPhotoUploadTicket> CreateEventPhotoUploadAsync(string groupUrlname, CreateEventPhotoUploadRequest request, CancellationToken cancellationToken)
     {
         EnsureGroup(groupUrlname);
@@ -159,6 +212,16 @@ public sealed class FakeMeetupApiClient : IMeetupApiClient
         }
 
         return current;
+    }
+
+    private static MeetupSpeaker GetSpeakerForUpdate(MeetupEvent current)
+    {
+        if (current.Speakers.Count == 0)
+        {
+            throw new InvalidOperationException($"Event '{current.Id}' does not have structured speaker details.");
+        }
+
+        return current.Speakers[0];
     }
 
     private void EnsureGroup(string groupUrlname)
