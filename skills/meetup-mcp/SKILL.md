@@ -35,6 +35,7 @@ Use this skill when:
 
 | Tool | Description |
 |------|-------------|
+| `create_venue` | Create a new venue for the group. The API may return existing matches in `didYouMean` instead of creating a duplicate. |
 | `create_event` | Creates an event as DRAFT by default. Set `publishNow=true` only if `MEETUP_ALLOW_PUBLISH=true`. |
 | `edit_event` | Edit any combination of: title, description, startDateTime, duration, venueId, howToFindUs, featuredPhotoId. |
 | `add_event_speaker` | Add structured speaker details to an event. Meetup currently exposes one speaker profile per event through this API. |
@@ -93,6 +94,20 @@ Access tokens expire after 1 hour. The server automatically refreshes using the 
 ```
 search_events(status="upcoming", limit=10)
 ```
+
+### Create a venue
+
+```
+create_venue(
+  name="Community Center",
+  address="500 Innovation Blvd",
+  city="Houston",
+  country="us",
+  state="TX"
+)
+```
+
+Returns `venue` (the created venue) and `didYouMean` (existing similar venues if the API detected a potential duplicate). Note: the Meetup API does not support updating or deleting venues.
 
 ### Draft a new event
 

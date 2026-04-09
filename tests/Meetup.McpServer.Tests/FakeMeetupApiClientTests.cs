@@ -142,4 +142,42 @@ public sealed class FakeMeetupApiClientTests
         Assert.Equal("Alice Smith", edited.Speakers[0].Name);
         Assert.Equal("Expert in distributed systems.", edited.Speakers[0].Bio);
     }
+
+    [Fact]
+    public async Task CanCreateVenueAndUseInEvent()
+    {
+        var api = new FakeMeetupApiClient("nhdnug");
+
+        var result = await api.CreateVenueAsync(
+            "nhdnug",
+            new CreateVenueRequest(
+                Name: "New Conference Center",
+                Address: "500 Innovation Blvd",
+                City: "Houston",
+                Country: "us",
+                State: "TX"),
+            CancellationToken.None);
+
+        Assert.NotNull(result.Venue);
+        Assert.Equal("New Conference Center", result.Venue.Name);
+        Assert.Equal("500 Innovation Blvd", result.Venue.Address);
+        Assert.Empty(result.DidYouMean);
+
+        // Verify the new venue appears in list
+        var venues = await api.ListVenuesAsync("nhdnug", 100, CancellationToken.None);
+        Assert.Contains(venues, v => v.Id == result.Venue.Id);
+
+        // Verify the new venue can be used when creating an event
+        var created = await api.CreateEventAsync(
+            "nhdnug",
+            new CreateEventRequest(
+                Title: "Event at New Venue",
+                Description: "Testing new venue",
+                StartDateTime: DateTimeOffset.UtcNow.AddDays(7),
+                Duration: "PT2H",
+                VenueId: result.Venue.Id),
+            CancellationToken.None);
+
+        Assert.Equal(result.Venue.Id, created.Venue?.Id);
+    }
 }
