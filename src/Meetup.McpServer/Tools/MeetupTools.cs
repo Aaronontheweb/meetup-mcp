@@ -112,6 +112,29 @@ public sealed class MeetupTools
         return _apiClient.ListVenuesAsync(_options.GroupUrlname, Math.Clamp(limit, 1, 100), cancellationToken);
     }
 
+    [McpServerTool, Description("Create a new venue for the configured Meetup group. The API may return existing matches in 'didYouMean' instead of creating a duplicate.")]
+    public Task<CreateVenueResult> CreateVenue(
+        [Description("Venue name.")] string name,
+        [Description("Street address.")] string address,
+        [Description("City.")] string city,
+        [Description("Country code (e.g. 'us').")] string country,
+        [Description("State or region (optional).")] string? state = null,
+        [Description("Venue visibility: 'PUBLIC' or 'GROUP'. Defaults to group setting if omitted.")] string? visibility = null,
+        CancellationToken cancellationToken = default)
+    {
+        _policy.Demand(MeetupCapability.CreateVenue, "create_venue");
+
+        var request = new CreateVenueRequest(
+            Name: name,
+            Address: address,
+            City: city,
+            Country: country,
+            State: state,
+            Visibility: visibility);
+
+        return _apiClient.CreateVenueAsync(_options.GroupUrlname, request, cancellationToken);
+    }
+
     [McpServerTool, Description("Create a new event in the configured Meetup group. Defaults to DRAFT unless publish is explicitly requested and enabled.")]
     public Task<MeetupEvent> CreateEvent(
         [Description("Event title.")] string title,

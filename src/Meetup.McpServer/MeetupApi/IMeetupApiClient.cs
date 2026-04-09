@@ -14,6 +14,8 @@ public interface IMeetupApiClient
 
     Task<IReadOnlyList<MeetupVenue>> ListVenuesAsync(string groupUrlname, int limit, CancellationToken cancellationToken);
 
+    Task<CreateVenueResult> CreateVenueAsync(string groupUrlname, CreateVenueRequest request, CancellationToken cancellationToken);
+
     Task<MeetupEvent> CreateEventAsync(string groupUrlname, CreateEventRequest request, CancellationToken cancellationToken);
 
     Task<MeetupEvent> EditEventAsync(EditEventRequest request, CancellationToken cancellationToken);

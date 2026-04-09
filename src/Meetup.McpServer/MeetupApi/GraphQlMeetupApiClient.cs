@@ -174,6 +174,70 @@ public sealed class GraphQlMeetupApiClient : IMeetupApiClient
         return venues;
     }
 
+    public async Task<CreateVenueResult> CreateVenueAsync(string groupUrlname, CreateVenueRequest request, CancellationToken cancellationToken)
+    {
+        var group = await GetGroupAsync(groupUrlname, cancellationToken);
+
+        const string query = """
+            mutation($input: CreateVenueInput!) {
+              createVenue(input: $input) {
+                venue {
+                  id
+                  name
+                  address
+                  city
+                  state
+                  country
+                }
+                didYouMean {
+                  id
+                  name
+                  address
+                  city
+                  state
+                  country
+                }
+                errors {
+                  message
+                  code
+                  field
+                }
+              }
+            }
+            """;
+
+        var input = new Dictionary<string, object?>
+        {
+            ["groupId"] = group.Id,
+            ["name"] = request.Name,
+            ["address"] = request.Address,
+            ["city"] = request.City,
+            ["country"] = request.Country,
+        };
+
+        if (request.State is not null) input["state"] = request.State;
+        if (request.Visibility is not null) input["visibility"] = request.Visibility;
+
+        var data = await ExecuteAsync(query, new { input }, cancellationToken);
+        var payload = data.GetProperty("createVenue");
+        ThrowMutationErrorsIfAny(payload);
+
+        var venue = payload.TryGetProperty("venue", out var venueJson) && venueJson.ValueKind == JsonValueKind.Object
+            ? ParseVenue(venueJson)
+            : null;
+
+        var didYouMean = new List<MeetupVenue>();
+        if (payload.TryGetProperty("didYouMean", out var suggestions) && suggestions.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in suggestions.EnumerateArray())
+            {
+                didYouMean.Add(ParseVenue(item));
+            }
+        }
+
+        return new CreateVenueResult(venue, didYouMean);
+    }
+
     public async Task<MeetupEvent> CreateEventAsync(string groupUrlname, CreateEventRequest request, CancellationToken cancellationToken)
     {
         const string query = """

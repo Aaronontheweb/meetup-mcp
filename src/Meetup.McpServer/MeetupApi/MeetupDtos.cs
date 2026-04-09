@@ -53,4 +53,16 @@ public sealed record PublishEventRequest(string EventId);
 
 public sealed record CreateEventPhotoUploadRequest(string ContentType, bool SetAsMain = false, string PhotoType = "GROUP_PHOTO");
 
+public sealed record CreateVenueRequest(
+    string Name,
+    string Address,
+    string City,
+    string Country,
+    string? State = null,
+    string? Visibility = null);
+
+public sealed record CreateVenueResult(
+    MeetupVenue? Venue,
+    IReadOnlyList<MeetupVenue> DidYouMean);
+
 public sealed record EventPhotoUploadTicket(string PhotoId, string UploadUrl, string? BaseUrl, string? ImagePath);

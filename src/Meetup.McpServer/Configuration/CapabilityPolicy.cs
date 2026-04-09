@@ -9,7 +9,8 @@ public enum MeetupCapability
     EditEvent,
     PublishEvent,
     Destructive,
-    PhotoUpload
+    PhotoUpload,
+    CreateVenue
 }
 
 public sealed class CapabilityPolicy
@@ -30,6 +31,7 @@ public sealed class CapabilityPolicy
             MeetupCapability.EditEvent => _options.Mode == MeetupServerMode.Organizer,
             MeetupCapability.PhotoUpload => _options.Mode == MeetupServerMode.Organizer,
             MeetupCapability.PublishEvent => _options.Mode == MeetupServerMode.Organizer && _options.AllowPublish,
+            MeetupCapability.CreateVenue => _options.Mode == MeetupServerMode.Organizer,
             MeetupCapability.Destructive => _options.Mode == MeetupServerMode.Organizer && _options.AllowDestructive,
             _ => false
         };

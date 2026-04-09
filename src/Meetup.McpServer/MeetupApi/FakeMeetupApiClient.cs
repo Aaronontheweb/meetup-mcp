@@ -6,16 +6,16 @@ public sealed class FakeMeetupApiClient : IMeetupApiClient
 {
     private readonly string _groupUrlname;
     private readonly ConcurrentDictionary<string, MeetupEvent> _events = new();
-    private readonly IReadOnlyList<MeetupVenue> _venues;
+    private readonly List<MeetupVenue> _venues;
 
     public FakeMeetupApiClient(string groupUrlname)
     {
         _groupUrlname = groupUrlname;
-        _venues =
-        [
+        _venues = new List<MeetupVenue>
+        {
             new MeetupVenue("venue-1", "Main Venue", "123 Organizer Ave", "Houston", "TX", "US"),
             new MeetupVenue("venue-2", "Overflow Room", "450 Backup St", "Houston", "TX", "US")
-        ];
+        };
 
         var seedEvent = new MeetupEvent(
             Id: "evt-1000",
@@ -73,6 +73,16 @@ public sealed class FakeMeetupApiClient : IMeetupApiClient
         EnsureGroup(groupUrlname);
         var results = _venues.Take(Math.Max(1, limit)).ToArray();
         return Task.FromResult<IReadOnlyList<MeetupVenue>>(results);
+    }
+
+    public Task<CreateVenueResult> CreateVenueAsync(string groupUrlname, CreateVenueRequest request, CancellationToken cancellationToken)
+    {
+        EnsureGroup(groupUrlname);
+
+        var id = $"venue-{Random.Shared.Next(1001, 9999)}";
+        var venue = new MeetupVenue(id, request.Name, request.Address, request.City, request.State, request.Country);
+        _venues.Add(venue);
+        return Task.FromResult(new CreateVenueResult(venue, Array.Empty<MeetupVenue>()));
     }
 
     public Task<MeetupEvent> CreateEventAsync(string groupUrlname, CreateEventRequest request, CancellationToken cancellationToken)
