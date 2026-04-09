@@ -7,12 +7,12 @@
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <VersionPrefix>0.2.1</VersionPrefix>
-    <PackageReleaseNotes>Adds venue creation support to the MCP server.
+    <VersionPrefix>0.2.2</VersionPrefix>
+    <PackageReleaseNotes>Fixes `create_venue` throwing when the Meetup API returns duplicate venue suggestions.
 
-**Features**
+**Bug Fixes**
 
-* Added `create_venue` tool for creating new venues via the Meetup GraphQL API. The API supports deduplication — similar existing venues are returned in the `didYouMean` field rather than creating duplicates. ([#30](https://github.com/Aaronontheweb/meetup-mcp/issues/30), [#31](https://github.com/Aaronontheweb/meetup-mcp/pull/31))</PackageReleaseNotes>
+* Fixed `create_venue` throwing `InvalidOperationException` on `venue_exists` instead of returning `didYouMean` suggestions ([#33](https://github.com/Aaronontheweb/meetup-mcp/issues/33), [#34](https://github.com/Aaronontheweb/meetup-mcp/pull/34))</PackageReleaseNotes>
   </PropertyGroup>
   <PropertyGroup>
     <NetStandardLibVersion>netstandard2.0</NetStandardLibVersion>
