@@ -180,4 +180,25 @@ public sealed class FakeMeetupApiClientTests
 
         Assert.Equal(result.Venue.Id, created.Venue?.Id);
     }
+
+    [Fact]
+    public async Task CreateVenue_ReturnsSuggestionsWhenDuplicateExists()
+    {
+        var api = new FakeMeetupApiClient("nhdnug");
+
+        // "Main Venue" is pre-seeded — creating a venue with the same name should return it as a suggestion
+        var result = await api.CreateVenueAsync(
+            "nhdnug",
+            new CreateVenueRequest(
+                Name: "Main Venue",
+                Address: "999 Different St",
+                City: "Houston",
+                Country: "us",
+                State: "TX"),
+            CancellationToken.None);
+
+        Assert.Null(result.Venue);
+        Assert.NotEmpty(result.DidYouMean);
+        Assert.Contains(result.DidYouMean, v => v.Name == "Main Venue");
+    }
 }
