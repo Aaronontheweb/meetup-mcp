@@ -1,3 +1,11 @@
+#### 0.2.1 2026-04-08 ####
+
+Adds venue creation support to the MCP server.
+
+**Features**
+
+* Added `create_venue` tool for creating new venues via the Meetup GraphQL API. The API supports deduplication — similar existing venues are returned in the `didYouMean` field rather than creating duplicates. ([#30](https://github.com/Aaronontheweb/meetup-mcp/issues/30), [#31](https://github.com/Aaronontheweb/meetup-mcp/pull/31))
+
 #### 0.2.0 2026-03-31 ####
 
 Fixes several bugs in event editing and Docker deployment, and adds headless OAuth support for server and container environments.
