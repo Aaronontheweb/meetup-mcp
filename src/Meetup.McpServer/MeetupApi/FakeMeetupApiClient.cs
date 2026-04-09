@@ -79,6 +79,13 @@ public sealed class FakeMeetupApiClient : IMeetupApiClient
     {
         EnsureGroup(groupUrlname);
 
+        // Simulate Meetup API deduplication — if a venue with the same name exists, return it as a suggestion
+        var existing = _venues.Where(v => string.Equals(v.Name, request.Name, StringComparison.OrdinalIgnoreCase)).ToArray();
+        if (existing.Length > 0)
+        {
+            return Task.FromResult(new CreateVenueResult(null, existing));
+        }
+
         var id = $"venue-{Random.Shared.Next(1001, 9999)}";
         var venue = new MeetupVenue(id, request.Name, request.Address, request.City, request.State, request.Country);
         _venues.Add(venue);

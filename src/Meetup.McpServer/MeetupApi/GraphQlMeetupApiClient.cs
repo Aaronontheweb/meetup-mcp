@@ -220,12 +220,9 @@ public sealed class GraphQlMeetupApiClient : IMeetupApiClient
 
         var data = await ExecuteAsync(query, new { input }, cancellationToken);
         var payload = data.GetProperty("createVenue");
-        ThrowMutationErrorsIfAny(payload);
 
-        var venue = payload.TryGetProperty("venue", out var venueJson) && venueJson.ValueKind == JsonValueKind.Object
-            ? ParseVenue(venueJson)
-            : null;
-
+        // Extract didYouMean before checking errors — the API returns suggestions
+        // alongside a venue_exists error, and we want to surface them to the caller.
         var didYouMean = new List<MeetupVenue>();
         if (payload.TryGetProperty("didYouMean", out var suggestions) && suggestions.ValueKind == JsonValueKind.Array)
         {
@@ -234,6 +231,15 @@ public sealed class GraphQlMeetupApiClient : IMeetupApiClient
                 didYouMean.Add(ParseVenue(item));
             }
         }
+
+        if (didYouMean.Count == 0)
+        {
+            ThrowMutationErrorsIfAny(payload);
+        }
+
+        var venue = payload.TryGetProperty("venue", out var venueJson) && venueJson.ValueKind == JsonValueKind.Object
+            ? ParseVenue(venueJson)
+            : null;
 
         return new CreateVenueResult(venue, didYouMean);
     }
