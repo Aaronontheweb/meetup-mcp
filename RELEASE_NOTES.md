@@ -1,3 +1,11 @@
+#### 0.2.2 2026-04-09 ####
+
+Fixes `create_venue` throwing when the Meetup API returns duplicate venue suggestions.
+
+**Bug Fixes**
+
+* Fixed `create_venue` throwing `InvalidOperationException` on `venue_exists` instead of returning `didYouMean` suggestions ([#33](https://github.com/Aaronontheweb/meetup-mcp/issues/33), [#34](https://github.com/Aaronontheweb/meetup-mcp/pull/34))
+
 #### 0.2.1 2026-04-08 ####
 
 Adds venue creation support to the MCP server.
